@@ -1,0 +1,2 @@
+# amqproxy with docker running
+

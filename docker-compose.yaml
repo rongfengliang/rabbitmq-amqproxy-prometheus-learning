@@ -1,0 +1,65 @@
+version: "3"
+services:
+  vmstorage:
+    image: victoriametrics/vmstorage
+    ports:
+      - 8482:8482
+      - 8400:8482
+      - 8401:8482
+    volumes:
+      - ./strgdata:/storage
+    command:
+      - "--storageDataPath=/storage"
+  vmagent:
+    image: victoriametrics/vmagent
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - 8429:8429
+    command:
+      - -promscrape.config=/etc/prometheus/prometheus.yml
+      - -remoteWrite.url=http://vminsert:8480/insert/1/prometheus
+  vminsert:
+    image: victoriametrics/vminsert
+    command:
+      - "--storageNode=vmstorage:8400"
+    ports:
+      - 8480:8480
+  vmselect:
+    image: victoriametrics/vmselect
+    command:
+      - "--storageNode=vmstorage:8401"
+    ports:
+      - 8481:8481
+  grafana:
+    image: grafana/grafana
+    ports:
+      - 3000:3000
+  rabbitmq:
+    build: ./
+    hostname: 1-rabbit
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+      - "15692:15692"
+    environment:
+      - "RABBITMQ_DEFAULT_USER=dalong"
+      - "RABBITMQ_DEFAULT_PASS=dalong"
+      - "RABBITMQ_NODENAME=rabbit@1-rabbit"
+  rabbitmq2:
+    build: ./
+    hostname: 2-rabbit
+    ports:
+      - "5674:5672"
+      - "15674:15672"
+      - "15694:15692"
+    environment:
+      - "RABBITMQ_DEFAULT_USER=dalong"
+      - "RABBITMQ_DEFAULT_PASS=dalong"
+      - "RABBITMQ_NODENAME=rabbit@2-rabbit"
+  amqpproxy:
+    image: dalongrong/amqpproxy:master
+    ports:
+      - "5673:5673"
+    environment:
+      - "AMQP_URL=amqp://rabbitmq2:5672"
